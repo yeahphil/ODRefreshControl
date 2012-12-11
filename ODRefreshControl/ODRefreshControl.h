@@ -30,6 +30,8 @@
 @property (nonatomic, assign) UIActivityIndicatorViewStyle activityIndicatorViewStyle;
 @property (nonatomic, strong) UIColor *activityIndicatorViewColor; // iOS5 or more
 
+@property (nonatomic, strong) NSString *message;
+
 - (id)initInScrollView:(UIScrollView *)scrollView;
 
 // use custom activity indicator

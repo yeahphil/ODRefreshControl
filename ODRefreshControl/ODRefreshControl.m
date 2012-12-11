@@ -10,9 +10,10 @@
 
 #import "ODRefreshControl.h"
 
-#define kTotalViewHeight    400
-#define kOpenedViewHeight   44
-#define kMinTopPadding      9
+#define kMessageViewHeight  12
+#define kTotalViewHeight    (400 + (self.message ? kMessageViewHeight : 0))
+#define kOpenedViewHeight   (44 + (self.message ? kMessageViewHeight : 0))
+#define kMinTopPadding      (9 + (self.message ? kMessageViewHeight : 0))
 #define kMaxTopPadding      5
 #define kMinTopRadius       12.5
 #define kMaxTopRadius       16
@@ -24,13 +25,14 @@
 #define kMaxArrowSize       3
 #define kMinArrowRadius     5
 #define kMaxArrowRadius     7
-#define kMaxDistance        53
+#define kMaxDistance        45
 
 @interface ODRefreshControl ()
 
 @property (nonatomic, readwrite) BOOL refreshing;
 @property (nonatomic, assign) UIScrollView *scrollView;
 @property (nonatomic, assign) UIEdgeInsets originalContentInset;
+@property (nonatomic, strong) UILabel *messageLabel;
 
 @end
 
@@ -41,6 +43,8 @@
 
 @synthesize scrollView = _scrollView;
 @synthesize originalContentInset = _originalContentInset;
+
+@synthesize messageLabel = _messageLabel;
 
 static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
 {
@@ -53,7 +57,7 @@ static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
 
 - (id)initInScrollView:(UIScrollView *)scrollView activityIndicatorView:(UIView *)activity
 {
-    self = [super initWithFrame:CGRectMake(0, -kTotalViewHeight, scrollView.frame.size.width, kTotalViewHeight)];
+    self = [super initWithFrame:CGRectMake(0, -(kTotalViewHeight + (self.message ? kMessageViewHeight : 0)), scrollView.frame.size.width, kTotalViewHeight + (self.message ? kMessageViewHeight : 0))];
     
     if (self) {
         self.scrollView = scrollView;
@@ -100,6 +104,19 @@ static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
         _highlightLayer = [CAShapeLayer layer];
         _highlightLayer.fillColor = [[[UIColor whiteColor] colorWithAlphaComponent:0.2] CGColor];
         [_shapeLayer addSublayer:_highlightLayer];
+        
+        _messageLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(self.bounds)-kMessageViewHeight, 320, kMessageViewHeight)];
+        _messageLabel.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
+        _messageLabel.font = [UIFont systemFontOfSize:11];
+        _messageLabel.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+        _messageLabel.shadowColor = [UIColor colorWithWhite:0.97 alpha:1.0];
+        _messageLabel.textAlignment = UITextAlignmentCenter;
+        _messageLabel.shadowOffset = CGSizeMake(0, 1);
+        _messageLabel.backgroundColor = [UIColor clearColor];
+//        _messageLabel.backgroundColor = [[UIColor purpleColor] colorWithAlphaComponent:0.5];
+        _messageLabel.hidden = YES;
+        
+        [self addSubview:_messageLabel];
     }
     return self;
 }
@@ -115,6 +132,19 @@ static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
 {
     super.enabled = enabled;
     _shapeLayer.hidden = !self.enabled;
+}
+
+- (void)setMessage:(NSString *)message
+{
+    _messageLabel.text = message;
+    
+    BOOL hidden = _messageLabel.hidden = (message == nil);
+    self.frame = CGRectMake(0, -(kTotalViewHeight + (!hidden ? kMessageViewHeight : 0)), _scrollView.frame.size.width, kTotalViewHeight + (!hidden ? kMessageViewHeight : 0));
+}
+
+- (NSString *)message
+{
+    return _messageLabel.text;
 }
 
 - (void)willMoveToSuperview:(UIView *)newSuperview
@@ -168,7 +198,7 @@ static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
     if ([keyPath isEqualToString:@"contentInset"]) {
         if (!_ignoreInset) {
             self.originalContentInset = [[change objectForKey:@"new"] UIEdgeInsetsValue];
-            self.frame = CGRectMake(0, -kTotalViewHeight, self.scrollView.frame.size.width, kTotalViewHeight);
+            self.frame = CGRectMake(0, -(kTotalViewHeight + (self.message ? kMessageViewHeight : 0)), self.scrollView.frame.size.width, (kTotalViewHeight + (self.message ? kMessageViewHeight : 0)));
         }
         return;
     }
@@ -185,7 +215,7 @@ static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
             
             [CATransaction begin];
             [CATransaction setValue:(id)kCFBooleanTrue forKey:kCATransactionDisableActions];
-            _shapeLayer.position = CGPointMake(0, kMaxDistance + offset + kOpenedViewHeight);
+            _shapeLayer.position = CGPointMake(0, kMaxDistance + offset + kOpenedViewHeight + (self.message ? kMessageViewHeight : 0));
             [CATransaction commit];
 
             _activity.center = CGPointMake(floor(self.frame.size.width / 2), MIN(offset + self.frame.size.height + floor(kOpenedViewHeight / 2), self.frame.size.height - kOpenedViewHeight/ 2));
@@ -264,7 +294,7 @@ static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
     CGMutablePathRef path = CGPathCreateMutable();
     
     //Calculate some useful points and values
-    CGFloat verticalShift = MAX(0, -((kMaxTopRadius + kMaxBottomRadius + kMaxTopPadding + kMaxBottomPadding) + offset));
+    CGFloat verticalShift = MAX(0, -((kMaxTopRadius + kMaxBottomRadius + kMaxTopPadding + kMaxBottomPadding + (self.message ? kMessageViewHeight : 0)) + offset));
     CGFloat distance = MIN(kMaxDistance, fabs(verticalShift));
     CGFloat percentage = 1 - (distance / kMaxDistance);
     
@@ -273,7 +303,7 @@ static inline CGFloat lerp(CGFloat a, CGFloat b, CGFloat p)
     CGFloat currentBottomRadius = lerp(kMinBottomRadius, kMaxBottomRadius, percentage);
     CGFloat currentBottomPadding =  lerp(kMinBottomPadding, kMaxBottomPadding, percentage);
     
-    CGPoint bottomOrigin = CGPointMake(floor(self.bounds.size.width / 2), self.bounds.size.height - currentBottomPadding -currentBottomRadius);
+    CGPoint bottomOrigin = CGPointMake(floor(self.bounds.size.width / 2), self.bounds.size.height - (self.message ? kMessageViewHeight : 0) - currentBottomPadding -currentBottomRadius);
     CGPoint topOrigin = CGPointZero;
     if (distance == 0) {
         topOrigin = CGPointMake(floor(self.bounds.size.width / 2), bottomOrigin.y);

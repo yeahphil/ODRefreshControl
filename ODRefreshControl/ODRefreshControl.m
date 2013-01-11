@@ -10,7 +10,7 @@
 
 #import "ODRefreshControl.h"
 
-#define kMessageViewHeight  12
+#define kMessageViewHeight  16 
 #define kTotalViewHeight    (400 + (self.message ? kMessageViewHeight : 0))
 #define kOpenedViewHeight   (44 + (self.message ? kMessageViewHeight : 0))
 #define kMinTopPadding      (9 + (self.message ? kMessageViewHeight : 0))
